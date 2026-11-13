@@ -1,31 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-PIQUE UY — Aplicación Móvil Nativa en Python (Kivy OpenGL) para Android APK / AAB (Google Play Store)
-Estética táctica de campo inspirada en FishMan - Fishing Spots (Sonar Obsidian + Chartreuse + Boya Orange).
-Incluye:
-1. Mapa Vectorial Offline de Uruguay con pines de Fish Score, batimetría y descarga de sectores en SQLite.
-2. Clima Ideal de Pesca, Barómetro en hPa, Tabla Solunar y Mareas.
-3. Enciclopedia completa de peces de Agua Dulce y Salada de Uruguay con buscador y filtros.
-4. Comunidad de Pescadores Uruguayos + Torneos en Vivo (Live Fishing Battles) + Regla Digital DINARA.
-5. Coach IA "El Baqueano" + Escáner de Especies.
+PIQUE UY — Aplicación Móvil Nativa en Python (Kivy OpenGL) para Android APK / AAB
+Estética táctica inspirada en FishMan - Fishing Spots (Sonar Obsidian + Chartreuse + Boya Orange).
+Incluye manejo blindado de almacenamiento interno de Android (user_data_dir) y protector de errores en pantalla.
 """
 
 import os
-from kivy.config import Config
-
-# Configuración de ventana únicamente cuando se prueba en escritorio; en Android ocupa 100% de la pantalla real
-Config.set("graphics", "width", "412")
-Config.set("graphics", "height", "860")
+import traceback
 
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.metrics import dp
-from kivy.properties import StringProperty, NumericProperty, BooleanProperty, DictProperty
+from kivy.properties import StringProperty, NumericProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.widget import Widget
 from kivy.uix.modalview import ModalView
 from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.graphics import Color, Line, Ellipse, RoundedRectangle
 
 from uruguay_data import OfflineDatabase, FISH_SPECIES
@@ -43,13 +36,13 @@ KV_INTERFACE = """
     height: self.minimum_height
     canvas.before:
         Color:
-            rgba: 0.063, 0.086, 0.078, 1  # #101614 Sonar Card
+            rgba: 0.063, 0.086, 0.078, 1
         RoundedRectangle:
             pos: self.pos
             size: self.size
             radius: [dp(14)]
         Color:
-            rgba: 0.149, 0.200, 0.176, 1  # #26332d Borde táctico
+            rgba: 0.149, 0.200, 0.176, 1
         Line:
             rounded_rectangle: (self.x, self.y, self.width, self.height, dp(14))
             width: 1.1
@@ -86,12 +79,12 @@ KV_INTERFACE = """
     orientation: "vertical"
     canvas.before:
         Color:
-            rgba: 0.035, 0.051, 0.043, 1  # #090d0b Fondo Obsidian
+            rgba: 0.035, 0.051, 0.043, 1
         Rectangle:
             pos: self.pos
             size: self.size
 
-    # CABECERA TÁCTICA SUPERIOR
+    # CABECERA TACTICA SUPERIOR
     BoxLayout:
         size_hint_y: None
         height: dp(56)
@@ -109,7 +102,6 @@ KV_INTERFACE = """
                 points: [self.x, self.y, self.right, self.y]
                 width: 1
 
-        # Insignia PUY
         Label:
             text: "PUY"
             bold: True
@@ -119,7 +111,7 @@ KV_INTERFACE = """
             size: dp(38), dp(38)
             canvas.before:
                 Color:
-                    rgba: 0.722, 1.0, 0.173, 1  # #b8ff2c Chartreuse
+                    rgba: 0.722, 1.0, 0.173, 1
                 RoundedRectangle:
                     pos: self.pos
                     size: self.size
@@ -129,7 +121,7 @@ KV_INTERFACE = """
             orientation: "vertical"
             spacing: dp(1)
             Label:
-                text: "PIQUE[color=b8ff2c]UY[/color] [size=10sp][color=ff7a2f]APK PRO[/color][/size]"
+                text: "PIQUE[color=b8ff2c]UY[/color] [size=10sp][color=ff7a2f]PRO[/color][/size]"
                 markup: True
                 bold: True
                 font_size: "15sp"
@@ -173,22 +165,18 @@ KV_INTERFACE = """
     ScreenManager:
         id: sm
 
-        # =====================================================================
         # PANTALLA 1: MAPA SONAR OFFLINE (ESTILO FISHMAN)
-        # =====================================================================
         Screen:
             name: "mapa"
             BoxLayout:
                 orientation: "vertical"
 
-                # Lienzo del Mapa Náutico Offline de Uruguay
                 UruguayOfflineMapWidget:
                     id: map_widget
-                    size_hint_y: 0.56
+                    size_hint_y: 0.52
 
-                # Panel Inferior Táctico del Pesquero (Bottom Sheet de FishMan)
                 ScrollView:
-                    size_hint_y: 0.44
+                    size_hint_y: 0.48
                     do_scroll_x: False
                     BoxLayout:
                         orientation: "vertical"
@@ -212,7 +200,7 @@ KV_INTERFACE = """
                             BoxLayout:
                                 orientation: "vertical"
                                 Label:
-                                    text: root.current_spot_water + " · " + root.current_spot_dept
+                                    text: root.current_spot_water + " - " + root.current_spot_dept
                                     font_size: "11sp"
                                     bold: True
                                     color: 0.722, 1.0, 0.173, 1
@@ -220,7 +208,7 @@ KV_INTERFACE = """
                                     text_size: self.size
                                 Label:
                                     text: root.current_spot_name
-                                    font_size: "16sp"
+                                    font_size: "15sp"
                                     bold: True
                                     color: 1, 1, 1, 1
                                     halign: "left"
@@ -233,7 +221,6 @@ KV_INTERFACE = """
                                     halign: "left"
                                     text_size: self.size
 
-                            # Insignia grande de FISH SCORE (0-100)
                             BoxLayout:
                                 orientation: "vertical"
                                 size_hint: None, None
@@ -257,7 +244,6 @@ KV_INTERFACE = """
                                     bold: True
                                     color: 0.03, 0.05, 0.04, 1
 
-                        # Telemetría rápida en 3 columnas
                         BoxLayout:
                             size_hint_y: None
                             height: dp(48)
@@ -277,7 +263,7 @@ KV_INTERFACE = """
                                 height: dp(48)
                                 padding: dp(6)
                                 Label:
-                                    text: "[color=889990]BARÓMETRO[/color]\\n[b]" + root.current_pressure + "[/b]"
+                                    text: "[color=889990]BAROMETRO[/color]\\n[b]" + root.current_pressure + "[/b]"
                                     markup: True
                                     font_size: "11sp"
                                     halign: "center"
@@ -305,7 +291,7 @@ KV_INTERFACE = """
                                 font_size: "12sp"
                                 color: 0.85, 0.90, 0.87, 1
                                 size_hint_y: None
-                                height: self.texture_size[1]
+                                height: self.texture_size[1] + dp(4)
                                 text_size: self.width, None
                             Label:
                                 text: "[color=b8ff2c][b]Carnadas Top Hoy:[/b] " + root.current_baits + "[/color]"
@@ -326,9 +312,7 @@ KV_INTERFACE = """
                                 text: "+ CLAVAR PIQUE GPS"
                                 on_release: root.open_new_catch_modal()
 
-        # =====================================================================
         # PANTALLA 2: CLIMA IDEAL, TABLA SOLUNAR, MAREAS Y REGLA DINARA
-        # =====================================================================
         Screen:
             name: "clima"
             ScrollView:
@@ -342,7 +326,7 @@ KV_INTERFACE = """
 
                     DarkCard:
                         Label:
-                            text: "[color=b8ff2c][b]PRONÓSTICO BIOMETEOROLÓGICO Y MAREAS[/b][/color]"
+                            text: "[color=b8ff2c][b]PRONOSTICO BIOMETEOROLOGICO Y MAREAS[/b][/color]"
                             markup: True
                             font_size: "12sp"
                             size_hint_y: None
@@ -351,14 +335,14 @@ KV_INTERFACE = """
                             text_size: self.size
                         Label:
                             text: root.current_spot_name + " (" + root.current_score_label + ")"
-                            font_size: "16sp"
+                            font_size: "15sp"
                             bold: True
                             size_hint_y: None
                             height: dp(24)
                             halign: "left"
                             text_size: self.size
                         Label:
-                            text: "Marea / Nivel: " + root.current_tide_state + "\\nPróxima Alta: " + root.current_next_high + "  |  Baja: " + root.current_next_low
+                            text: "Marea / Nivel: " + root.current_tide_state + "\\nProxima Alta: " + root.current_next_high + "  |  Baja: " + root.current_next_low
                             font_size: "12sp"
                             color: 0.82, 0.88, 0.85, 1
                             size_hint_y: None
@@ -367,7 +351,7 @@ KV_INTERFACE = """
 
                     DarkCard:
                         Label:
-                            text: "[color=ff7a2f][b]TABLA SOLUNAR URUGUAY — HORARIOS DE PIQUE[/b][/color]"
+                            text: "[color=ff7a2f][b]TABLA SOLUNAR URUGUAY - HORARIOS DE PIQUE[/b][/color]"
                             markup: True
                             font_size: "12sp"
                             size_hint_y: None
@@ -375,7 +359,7 @@ KV_INTERFACE = """
                             halign: "left"
                             text_size: self.size
                         Label:
-                            text: "Fase Lunar: " + root.current_moon_phase + "\\n[color=b8ff2c][b]Períodos Mayores (Pico 2h):[/b][/color] " + root.current_solunar_major + "\\n[color=38bdf8][b]Períodos Menores (1h):[/b][/color] " + root.current_solunar_minor
+                            text: "Fase Lunar: " + root.current_moon_phase + "\\n[color=b8ff2c][b]Periodos Mayores (Pico 2h):[/b][/color] " + root.current_solunar_major + "\\n[color=38bdf8][b]Periodos Menores (1h):[/b][/color] " + root.current_solunar_minor
                             markup: True
                             font_size: "12sp"
                             size_hint_y: None
@@ -384,7 +368,7 @@ KV_INTERFACE = """
 
                     DarkCard:
                         Label:
-                            text: "[color=b8ff2c][b]REGLA DIGITAL DINARA / CARU — CONTROL DE VEDA[/b][/color]"
+                            text: "[color=b8ff2c][b]REGLA DIGITAL DINARA / CARU - CONTROL DE VEDA[/b][/color]"
                             markup: True
                             font_size: "12sp"
                             size_hint_y: None
@@ -392,11 +376,11 @@ KV_INTERFACE = """
                             halign: "left"
                             text_size: self.size
                         Label:
-                            text: "Deslizá para medir tu captura en centímetros y verificar si cumple la talla mínima legal:"
+                            text: "Desliza para medir tu captura en centimetros y verificar si cumple la talla minima legal:"
                             font_size: "11sp"
                             color: 0.65, 0.72, 0.68, 1
                             size_hint_y: None
-                            height: self.texture_size[1]
+                            height: self.texture_size[1] + dp(4)
                             text_size: self.width, None
                         Slider:
                             id: cm_slider
@@ -405,7 +389,7 @@ KV_INTERFACE = """
                             value: 42
                             step: 1
                             size_hint_y: None
-                            height: dp(32)
+                            height: dp(34)
                             on_value: root.update_dinara_ruler(self.value)
                         Label:
                             text: root.dinara_ruler_result
@@ -432,9 +416,7 @@ KV_INTERFACE = """
                             height: self.texture_size[1] + dp(6)
                             text_size: self.width, None
 
-        # =====================================================================
-        # PANTALLA 3: COACH IA "EL BAQUEANO" + ESCÁNER VISUAL DE PECES
-        # =====================================================================
+        # PANTALLA 3: COACH IA "EL BAQUEANO" + ESCANER VISUAL DE PECES
         Screen:
             name: "ia"
             BoxLayout:
@@ -444,7 +426,7 @@ KV_INTERFACE = """
 
                 DarkCard:
                     Label:
-                        text: "[color=b8ff2c][b]FISH ID SCANNER & COACH TÁCTICO IA[/b][/color]"
+                        text: "[color=b8ff2c][b]FISH ID SCANNER & COACH TACTICO IA[/b][/color]"
                         markup: True
                         font_size: "12sp"
                         size_hint_y: None
@@ -452,11 +434,11 @@ KV_INTERFACE = """
                         halign: "left"
                         text_size: self.size
                     Label:
-                        text: "Tocá una especie para escanear su biometría y veda DINARA o preguntale al Baqueano qué aparejo usar hoy:"
+                        text: "Toca una especie para escanear su biometria y veda DINARA o preguntale al Baqueano que aparejo usar hoy:"
                         font_size: "11sp"
                         color: 0.7, 0.77, 0.73, 1
                         size_hint_y: None
-                        height: self.texture_size[1]
+                        height: self.texture_size[1] + dp(4)
                         text_size: self.width, None
 
                     BoxLayout:
@@ -490,11 +472,11 @@ KV_INTERFACE = """
                     height: dp(34)
                     spacing: dp(6)
                     TagButton:
-                        text: "¿Qué línea pongo hoy?"
-                        on_release: root.ask_baqueano("¿Qué línea, plomo y carnada uso hoy en este pesquero?")
+                        text: "Que linea pongo hoy?"
+                        on_release: root.ask_baqueano("Que linea, plomo y carnada uso hoy en este pesquero?")
                     TagButton:
                         text: "Encarne Corvina Negra"
-                        on_release: root.ask_baqueano("¿Cómo encarno el cangrejo para la Corvina Negra?")
+                        on_release: root.ask_baqueano("Como encarno el cangrejo para la Corvina Negra?")
 
                 BoxLayout:
                     size_hint_y: None
@@ -520,9 +502,7 @@ KV_INTERFACE = """
                         font_size: "12sp"
                         on_release: root.submit_ai_question()
 
-        # =====================================================================
         # PANTALLA 4: ENCICLOPEDIA COMPLETA (AGUA DULCE Y SALADA)
-        # =====================================================================
         Screen:
             name: "enciclopedia"
             BoxLayout:
@@ -541,7 +521,7 @@ KV_INTERFACE = """
                         text: "MAR / PLATA"
                         on_release: root.filter_species("SALADA")
                     TagButton:
-                        text: "RÍOS / DULCE"
+                        text: "RIOS / DULCE"
                         on_release: root.filter_species("DULCE")
 
                 ScrollView:
@@ -553,9 +533,7 @@ KV_INTERFACE = """
                         size_hint_y: None
                         height: self.minimum_height
 
-        # =====================================================================
         # PANTALLA 5: COMUNIDAD URUGUAYA + LIVE FISHING BATTLES
-        # =====================================================================
         Screen:
             name: "comunidad"
             BoxLayout:
@@ -565,7 +543,7 @@ KV_INTERFACE = """
 
                 DarkCard:
                     Label:
-                        text: "[color=b8ff2c][b]⚡ BATALLA DE PESCA EN VIVO · SALA #UY-884[/b][/color]"
+                        text: "[color=b8ff2c][b]BATALLA DE PESCA EN VIVO - SALA #UY-884[/b][/color]"
                         markup: True
                         font_size: "12sp"
                         size_hint_y: None
@@ -573,7 +551,7 @@ KV_INTERFACE = """
                         halign: "left"
                         text_size: self.size
                     Label:
-                        text: "1° Sebastián C. (Salto) — Dorado 88cm · [color=b8ff2c][b]1420 PTS[/b][/color]\\n2° Lucía F. (Santa Lucía) — Corvina Negra 94cm · [color=b8ff2c][b]1385 PTS[/b][/color]\\n3° Diego & Facu (Río Negro) — Tornasol 72cm · [color=b8ff2c][b]1190 PTS[/b][/color]"
+                        text: "1. Sebastian C. (Salto) - Dorado 88cm - [color=b8ff2c][b]1420 PTS[/b][/color]\\n2. Lucia F. (Santa Lucia) - Corvina Negra 94cm - [color=b8ff2c][b]1385 PTS[/b][/color]\\n3. Diego & Facu (Rio Negro) - Tornasol 72cm - [color=b8ff2c][b]1190 PTS[/b][/color]"
                         markup: True
                         font_size: "12sp"
                         size_hint_y: None
@@ -609,9 +587,7 @@ KV_INTERFACE = """
                         size_hint_y: None
                         height: self.minimum_height
 
-    # =========================================================================
-    # BARRA DE NAVEGACIÓN INFERIOR NATIVA DE 5 BOTONES (ESTILO FISHMAN)
-    # =========================================================================
+    # BARRA DE NAVEGACION INFERIOR NATIVA DE 5 BOTONES (ESTILO FISHMAN)
     BoxLayout:
         size_hint_y: None
         height: dp(60)
@@ -664,12 +640,6 @@ KV_INTERFACE = """
 
 
 class UruguayOfflineMapWidget(FloatLayout):
-    """
-    Lienzo Cartográfico Vectorial Offline en OpenGL para Android.
-    Dibuja la costa uruguaya, el Río Uruguay, el Río Negro, anillos de sonar y los pines interactivos de Fish Score.
-    Funciona 100% sin internet en cualquier dispositivo Android.
-    """
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.spots = []
@@ -691,11 +661,9 @@ class UruguayOfflineMapWidget(FloatLayout):
             return
 
         with self.canvas.before:
-            # Fondo Sonar Marino Profundo
             Color(0.035, 0.075, 0.095, 1)
             RoundedRectangle(pos=self.pos, size=self.size)
 
-            # Grilla de radar / sonar náutico
             Color(0.10, 0.20, 0.23, 0.45)
             for i in range(1, 6):
                 gx = self.x + (self.width / 6.0) * i
@@ -704,32 +672,30 @@ class UruguayOfflineMapWidget(FloatLayout):
                 gy = self.y + (self.height / 5.0) * j
                 Line(points=[self.x, gy, self.right, gy], width=1)
 
-            # Contorno vectorial del Río Uruguay + Río de la Plata + Costa Atlántica (Offline)
             coast_norm = [
-                (0.18, 0.88),  # Bella Unión
-                (0.19, 0.74),  # Salto Grande
-                (0.20, 0.56),  # Paysandú
-                (0.21, 0.40),  # Fray Bentos
-                (0.27, 0.26),  # Colonia
-                (0.35, 0.21),  # Kiyú
-                (0.42, 0.17),  # Santa Lucía
-                (0.49, 0.13),  # Montevideo Escollera
-                (0.67, 0.14),  # Punta del Este / La Barra
-                (0.82, 0.25),  # La Paloma / Rocha
-                (0.91, 0.42),  # Chuy
+                (0.18, 0.88),
+                (0.19, 0.74),
+                (0.20, 0.56),
+                (0.21, 0.40),
+                (0.27, 0.26),
+                (0.35, 0.21),
+                (0.42, 0.17),
+                (0.49, 0.13),
+                (0.67, 0.14),
+                (0.82, 0.25),
+                (0.91, 0.42),
             ]
             pts_coast = []
             for nx, ny in coast_norm:
                 pts_coast.extend([self.x + nx * self.width, self.y + ny * self.height])
 
-            Color(0.722, 1.0, 0.173, 0.75)  # Línea chartreuse de costa/río
+            Color(0.722, 1.0, 0.173, 0.75)
             Line(points=pts_coast, width=dp(2.2))
 
-            # Cuenca del Río Negro (Interior)
             rio_negro_norm = [
                 (0.21, 0.40),
                 (0.34, 0.45),
-                (0.46, 0.50),  # Rincón del Bonete / Andresito
+                (0.46, 0.50),
                 (0.64, 0.58),
             ]
             pts_rn = []
@@ -737,9 +703,8 @@ class UruguayOfflineMapWidget(FloatLayout):
                 pts_rn.extend([self.x + nx * self.width, self.y + ny * self.height])
 
             Color(0.22, 0.74, 0.97, 0.7)
-            Line(points=pts_rn, width=dp(1.8), dash_length=dp(5), dash_offset=dp(3))
+            Line(points=pts_rn, width=dp(1.8))
 
-        # Pines táctiles de cada Pesquero con su Fish Score (como en FishMan)
         coord_positions = {
             "sal-salto-grande": (0.19, 0.73),
             "rne-andresito": (0.46, 0.50),
@@ -757,55 +722,32 @@ class UruguayOfflineMapWidget(FloatLayout):
             is_sel = sp["id"] == self.selected_spot_id
 
             btn = Button(
-                text=f"{sp['fish_score']} · {sp['department'].split('/')[0].strip()[:6]}",
+                text=f"{sp['fish_score']} {sp['department'].split('/')[0].strip()[:6]}",
                 size_hint=(None, None),
                 size=(dp(88), dp(28)),
                 pos=(px - dp(44), py - dp(14)),
                 background_normal="",
-                background_color=(0, 0, 0, 0),
+                background_color=(0.722, 1.0, 0.173, 1) if is_sel else (0.10, 0.15, 0.13, 1),
                 color=(0.03, 0.05, 0.04, 1) if is_sel else (0.95, 0.98, 0.96, 1),
                 font_size="10sp",
                 bold=True,
             )
 
-            with btn.canvas.before:
-                if is_sel:
-                    Color(0.722, 1.0, 0.173, 0.28)
-                    Ellipse(pos=(btn.x - dp(6), btn.y - dp(6)), size=(btn.width + dp(12), btn.height + dp(12)))
-                    Color(0.722, 1.0, 0.173, 1)
-                else:
-                    Color(0.063, 0.086, 0.078, 0.95)
-                RoundedRectangle(pos=btn.pos, size=btn.size, radius=[dp(9)])
-                Color(1, 1, 1, 1) if is_sel else Color(0.722, 1.0, 0.173, 0.7)
-                Line(rounded_rectangle=(btn.x, btn.y, btn.width, btn.height, dp(9)), width=1.2)
-
-            def _bind_pos(instance, value, is_selected=is_sel):
-                instance.canvas.before.clear()
-                with instance.canvas.before:
-                    if is_selected:
-                        Color(0.722, 1.0, 0.173, 1)
-                    else:
-                        Color(0.063, 0.086, 0.078, 0.95)
-                    RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(9)])
-                    Color(1, 1, 1, 1) if is_selected else Color(0.722, 1.0, 0.173, 0.7)
-                    Line(rounded_rectangle=(instance.x, instance.y, instance.width, instance.height, dp(9)), width=1.2)
-
-            btn.bind(pos=_bind_pos, size=_bind_pos)
             spot_ref = sp
             btn.bind(on_release=lambda inst, s=spot_ref: self.on_spot_selected(s) if self.on_spot_selected else None)
             self.add_widget(btn)
 
 
 class RootLayout(BoxLayout):
-    current_spot_name = StringProperty("Escollera Sarandí y Canal Sur")
+    current_spot_name = StringProperty("Escollera Sarandi y Canal Sur")
     current_spot_dept = StringProperty("Montevideo")
     current_spot_water = StringProperty("Estuario Salobre")
-    current_spot_coords = StringProperty("GPS -34.9125, -56.2128 · Prof 4 a 9 m")
+    current_spot_coords = StringProperty("GPS -34.9125, -56.2128")
     current_fish_score = NumericProperty(91)
     current_score_label = StringProperty("PIQUE FIRME")
     current_wind = StringProperty("14 km/h SE")
     current_pressure = StringProperty("1018 hPa")
-    current_temps = StringProperty("19.5°C")
+    current_temps = StringProperty("19.5 C")
     current_field_report = StringProperty("")
     current_baits = StringProperty("")
     current_tide_state = StringProperty("")
@@ -819,9 +761,9 @@ class RootLayout(BoxLayout):
     current_zone_species_summary = StringProperty("")
     ai_response_text = StringProperty("")
 
-    def __init__(self, **kwargs):
+    def __init__(self, db_dir=None, **kwargs):
         super().__init__(**kwargs)
-        self.db = OfflineDatabase()
+        self.db = OfflineDatabase(db_dir=db_dir)
         self.ai = BaqueanoAIEngine()
         self.spots = self.db.get_spots()
         self.selected_spot = self.spots[0]
@@ -838,12 +780,12 @@ class RootLayout(BoxLayout):
         self.current_spot_name = spot_dict["name"]
         self.current_spot_dept = spot_dict["department"]
         self.current_spot_water = spot_dict["water_type"]
-        self.current_spot_coords = f"GPS {spot_dict['lat']:.4f}S, {abs(spot_dict['lng']):.4f}W · Prof {spot_dict['depth_m']}"
+        self.current_spot_coords = f"GPS {spot_dict['lat']:.4f}S, {abs(spot_dict['lng']):.4f}W | Prof {spot_dict['depth_m']}"
         self.current_fish_score = spot_dict["fish_score"]
         self.current_score_label = spot_dict["score_label"]
         self.current_wind = f"{spot_dict['wind_kmh']} km/h {spot_dict['wind_dir'].split(' ')[0]}"
         self.current_pressure = f"{spot_dict['pressure_hpa']} hPa"
-        self.current_temps = f"{spot_dict['temp_water']}°C (Aire {spot_dict['temp_air']}°C)"
+        self.current_temps = f"{spot_dict['temp_water']}C (Aire {spot_dict['temp_air']}C)"
         self.current_field_report = spot_dict["field_report"]
         self.current_baits = spot_dict["top_baits"]
         self.current_tide_state = spot_dict["tide_state"]
@@ -854,17 +796,16 @@ class RootLayout(BoxLayout):
         self.current_moon_phase = spot_dict["moon_phase"]
 
         if spot_dict["downloaded"]:
-            self.offline_pack_status = f"✓ CARTA OFFLINE ({spot_dict['offline_pack_mb']} MB)"
+            self.offline_pack_status = f"CARTA OFFLINE OK ({spot_dict['offline_pack_mb']} MB)"
         else:
-            self.offline_pack_status = f"⬇ DESCARGAR CARTA ({spot_dict['offline_pack_mb']} MB)"
+            self.offline_pack_status = f"BAJAR CARTA ({spot_dict['offline_pack_mb']} MB)"
 
-        # Especies de la zona
         ids = spot_dict["species_ids"].split(",")
         lines = []
         for sp in FISH_SPECIES:
             if sp["id"] in ids:
                 lines.append(
-                    f"• [b]{sp['name']}[/b] ({sp['avg_weight']}) — [color=b8ff2c]Mín DINARA: {sp['min_cm']} cm[/color]"
+                    f"- [b]{sp['name']}[/b] ({sp['avg_weight']}) - [color=b8ff2c]Min DINARA: {sp['min_cm']} cm[/color]"
                 )
         self.current_zone_species_summary = "\n".join(lines)
 
@@ -881,25 +822,25 @@ class RootLayout(BoxLayout):
 
     def update_dinara_ruler(self, cm_val):
         cm = int(cm_val)
-        corvina_ok = "✅ LEGAL" if cm >= 35 else "⚠️ JUVENIL (<35cm)"
-        negra_ok = "✅ LEGAL" if cm >= 50 else "⚠️ JUVENIL (<50cm)"
-        dorado_ok = "✅ LEGAL" if cm >= 65 else "⚠️ DEVOLVER (<65cm)"
-        lenguado_ok = "✅ LEGAL" if cm >= 40 else "⚠️ JUVENIL (<40cm)"
+        corvina_ok = "[color=b8ff2c]LEGAL[/color]" if cm >= 35 else "[color=ff7a2f]JUVENIL (<35cm)[/color]"
+        negra_ok = "[color=b8ff2c]LEGAL[/color]" if cm >= 50 else "[color=ff7a2f]JUVENIL (<50cm)[/color]"
+        dorado_ok = "[color=b8ff2c]LEGAL[/color]" if cm >= 65 else "[color=ff7a2f]DEVOLVER (<65cm)[/color]"
+        lenguado_ok = "[color=b8ff2c]LEGAL[/color]" if cm >= 40 else "[color=ff7a2f]JUVENIL (<40cm)[/color]"
         self.dinara_ruler_result = (
             f"[b]Medida seleccionada: [color=b8ff2c]{cm} cm[/color][/b]\n"
-            f"• Corvina Rubia (35cm): {corvina_ok}   |   Lenguado (40cm): {lenguado_ok}\n"
-            f"• Corvina Negra (50cm): {negra_ok}   |   Dorado CARU (65cm): {dorado_ok}"
+            f"- Corvina Rubia (35cm): {corvina_ok}   |   Lenguado (40cm): {lenguado_ok}\n"
+            f"- Corvina Negra (50cm): {negra_ok}   |   Dorado CARU (65cm): {dorado_ok}"
         )
 
     def scan_species_demo(self, species_id):
         for sp in FISH_SPECIES:
             if sp["id"] == species_id:
                 self.ai_response_text = (
-                    f"[color=b8ff2c][b]ESCÁNER BIOMÉTRICO DINARA — 99.1% PRECISIÓN[/b][/color]\n\n"
+                    f"[color=b8ff2c][b]ESCANER BIOMETRICO DINARA - 99.1% PRECISION[/b][/color]\n\n"
                     f"[b]Especie:[/b] {sp['name']} ({sp['scientific']})\n"
-                    f"[b]Talla Mínima Legal:[/b] [color=ff7a2f]{sp['min_cm']} cm[/color]\n"
+                    f"[b]Talla Minima Legal:[/b] [color=ff7a2f]{sp['min_cm']} cm[/color]\n"
                     f"[b]Estado de Veda:[/b] {sp['veda']}\n\n"
-                    f"[b]Cómo identificarlo:[/b] {sp['id_tips']}\n\n"
+                    f"[b]Como identificarlo:[/b] {sp['id_tips']}\n\n"
                     f"[b]Aparejo recomendado:[/b] {sp['gear']}"
                 )
                 return
@@ -916,6 +857,8 @@ class RootLayout(BoxLayout):
         self.ask_baqueano(txt)
 
     def filter_species(self, mode):
+        if "encyclopedia_list" not in self.ids:
+            return
         container = self.ids.encyclopedia_list
         container.clear_widgets()
         from kivy.factory import Factory
@@ -930,9 +873,9 @@ class RootLayout(BoxLayout):
             lbl = Factory.Label(
                 text=(
                     f"[color=b8ff2c][b]{sp['name'].upper()}[/b][/color]  [i][size=11sp]({sp['scientific']})[/size][/i]\n"
-                    f"[color=ff7a2f]Agua: {sp['water']}  |  Talla Mínima DINARA: {sp['min_cm']} cm[/color]\n"
+                    f"[color=ff7a2f]Agua: {sp['water']}  |  Talla Minima DINARA: {sp['min_cm']} cm[/color]\n"
                     f"[b]Peso:[/b] {sp['avg_weight']}\n"
-                    f"[b]Carnadas/Señuelos:[/b] {sp['baits']}\n"
+                    f"[b]Carnadas/Senuelos:[/b] {sp['baits']}\n"
                     f"[b]Equipo:[/b] {sp['gear']}\n"
                     f"[b]Pesqueros UY:[/b] {sp['hotspots']}\n"
                     f"[color=889990][b]Veda:[/b] {sp['veda']}[/color]"
@@ -949,20 +892,22 @@ class RootLayout(BoxLayout):
             container.add_widget(card)
 
     def refresh_community_feed(self):
+        if "community_list" not in self.ids:
+            return
         container = self.ids.community_list
         container.clear_widgets()
         from kivy.factory import Factory
 
         for c in self.db.get_catches():
             card = Factory.DarkCard()
-            rel_tag = "[color=b8ff2c][DE DEVUELTO AL AGUA][/color]" if c["released"] else "[color=38bdf8][TALLA LEGAL][/color]"
+            rel_tag = "[color=b8ff2c][DEVUELTO AL AGUA][/color]" if c["released"] else "[color=38bdf8][TALLA LEGAL][/color]"
             lbl = Factory.Label(
                 text=(
-                    f"[b]{c['fisher']}[/b] · [color=889990]{c['time_ago']}[/color] {rel_tag}\n"
-                    f"[color=ff7a2f][b]{c['species']} — {c['weight_kg']} kg ({c['length_cm']} cm)[/b][/color]\n"
-                    f"📍 {c['spot_name']}  |  🪱 {c['bait']}\n"
+                    f"[b]{c['fisher']}[/b] - [color=889990]{c['time_ago']}[/color] {rel_tag}\n"
+                    f"[color=ff7a2f][b]{c['species']} - {c['weight_kg']} kg ({c['length_cm']} cm)[/b][/color]\n"
+                    f"Zona: {c['spot_name']}  |  Carnada: {c['bait']}\n"
                     f"\"{c['comment']}\"\n"
-                    f"[color=b8ff2c]♥ {c['likes']} felicitaciones de la barra[/color]"
+                    f"[color=b8ff2c]+ {c['likes']} felicitaciones de la barra[/color]"
                 ),
                 markup=True,
                 font_size="12sp",
@@ -978,17 +923,10 @@ class RootLayout(BoxLayout):
     def open_spot_selector(self):
         modal = ModalView(size_hint=(0.9, 0.72), background_color=(0, 0, 0, 0.85))
         box = BoxLayout(orientation="vertical", padding=dp(14), spacing=dp(8))
-        with box.canvas.before:
-            Color(0.063, 0.086, 0.078, 1)
-            RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(16)])
-        box.bind(
-            pos=lambda inst, v: self._redraw_modal_bg(inst),
-            size=lambda inst, v: self._redraw_modal_bg(inst),
-        )
 
         for sp in self.spots:
             btn = Button(
-                text=f"[{sp['fish_score']}] {sp['department'].split('/')[0].strip()} — {sp['name']}",
+                text=f"[{sp['fish_score']}] {sp['department'].split('/')[0].strip()} - {sp['name']}",
                 background_normal="",
                 background_color=(0.11, 0.15, 0.13, 1),
                 color=(0.722, 1.0, 0.173, 1) if sp["id"] == self.selected_spot["id"] else (1, 1, 1, 1),
@@ -1006,18 +944,11 @@ class RootLayout(BoxLayout):
 
         modal = ModalView(size_hint=(0.92, 0.65), background_color=(0, 0, 0, 0.85))
         box = BoxLayout(orientation="vertical", padding=dp(14), spacing=dp(8))
-        with box.canvas.before:
-            Color(0.063, 0.086, 0.078, 1)
-            RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(16)])
-        box.bind(
-            pos=lambda inst, v: self._redraw_modal_bg(inst),
-            size=lambda inst, v: self._redraw_modal_bg(inst),
-        )
 
         in_fisher = TextInput(hint_text="Tu nombre o apodo (Ej: Mati UY)", multiline=False)
         in_species = TextInput(hint_text="Especie (Ej: Corvina Rubia / Dorado)", text="Corvina Rubia", multiline=False)
         in_weight = TextInput(hint_text="Peso en kg (Ej: 3.6)", text="3.5", multiline=False)
-        in_bait = TextInput(hint_text="Carnada o señuelo usado", text="Camarón atado", multiline=False)
+        in_bait = TextInput(hint_text="Carnada o senuelo usado", text="Camaron atado", multiline=False)
         in_comment = TextInput(hint_text="Comentario del pique y distancia...", multiline=False)
 
         for w in (in_fisher, in_species, in_weight, in_bait, in_comment):
@@ -1037,7 +968,7 @@ class RootLayout(BoxLayout):
                 species=in_species.text.strip() or "Corvina Rubia",
                 weight_kg=w_kg,
                 length_cm=55,
-                bait=in_bait.text.strip() or "Camarón",
+                bait=in_bait.text.strip() or "Camaron",
                 comment=in_comment.text.strip() or "Pique registrado desde GPS offline.",
                 released=1,
             )
@@ -1056,19 +987,31 @@ class RootLayout(BoxLayout):
         modal.add_widget(box)
         modal.open()
 
-    def _redraw_modal_bg(self, widget):
-        widget.canvas.before.clear()
-        with widget.canvas.before:
-            Color(0.063, 0.086, 0.078, 1)
-            RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(16)])
-
 
 class PiqueUYMobileApp(App):
-    title = "PiqueUY — Pesca & Sonar Uruguay"
+    title = "PiqueUY - Pesca & Sonar Uruguay"
 
     def build(self):
-        Builder.load_string(KV_INTERFACE)
-        return RootLayout()
+        try:
+            Builder.load_string(KV_INTERFACE)
+            return RootLayout(db_dir=self.user_data_dir)
+        except Exception:
+            # Si por alguna razón hubiera un error en el dispositivo, lo muestra en pantalla en vez de cerrarse
+            err_text = traceback.format_exc()
+            sv = ScrollView()
+            lbl = Label(
+                text="DIAGNOSTICO DE ARRANQUE:\n\n" + err_text,
+                font_size="11sp",
+                color=(1, 0.4, 0.3, 1),
+                size_hint_y=None,
+                padding=(dp(12), dp(12)),
+            )
+            lbl.bind(
+                width=lambda i, v: setattr(i, "text_size", (v, None)),
+                texture_size=lambda i, v: setattr(i, "height", v[1] + dp(40)),
+            )
+            sv.add_widget(lbl)
+            return sv
 
 
 if __name__ == "__main__":
