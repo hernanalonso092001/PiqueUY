@@ -7,7 +7,8 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,db,json,ttf
 version = 1.0.0
 
-requirements = python3,kivy==2.3.0,sqlite3,openssl,certifi
+# Fijamos Python 3.11.5 y Kivy 2.3.0 para que no use Python 3.14 experimental
+requirements = hostpython3==3.11.5,python3==3.11.5,kivy==2.3.0,sqlite3,openssl,certifi
 
 orientation = portrait
 fullscreen = 0
@@ -23,8 +24,9 @@ android.accept_sdk_license = True
 android.archs = arm64-v8a
 android.allow_backup = True
 
-p4a.branch = master
+# Rama estable probada de python-for-android (no usa Python 3.14)
+p4a.branch = release-2024.01.21
 
 [buildozer]
-log_level = 2
+log_level = 1
 warn_on_root = 0
