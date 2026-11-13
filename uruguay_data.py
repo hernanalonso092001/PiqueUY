@@ -508,125 +508,153 @@ INITIAL_COMMUNITY_CATCHES = [
 
 
 class OfflineDatabase:
-    def __init__(self, db_path=None):
-        if db_path is None:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            db_path = os.path.join(base_dir, DB_FILENAME)
-        self.db_path = db_path
+    def __init__(self, db_dir=None):
+        self.mem_conn = None
+        if db_dir is None:
+            try:
+                from kivy.app import App
+                app = App.get_running_app()
+                if app and getattr(app, "user_data_dir", None):
+                    db_dir = app.user_data_dir
+            except Exception:
+                pass
+
+        if not db_dir:
+            db_dir = os.path.dirname(os.path.abspath(__file__))
+
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+            self.db_path = os.path.join(db_dir, DB_FILENAME)
+            test_conn = sqlite3.connect(self.db_path)
+            test_conn.close()
+        except Exception:
+            self.db_path = ":memory:"
+            self.mem_conn = sqlite3.connect(":memory:")
+            self.mem_conn.row_factory = sqlite3.Row
+
         self._init_db()
 
     def _connect(self):
+        if self.mem_conn is not None:
+            return self.mem_conn
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
 
     def _init_db(self):
-        with self._connect() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS spots (
-                    id TEXT PRIMARY KEY,
-                    name TEXT,
-                    department TEXT,
-                    water_type TEXT,
-                    lat REAL,
-                    lng REAL,
-                    map_x REAL,
-                    map_y REAL,
-                    fish_score INTEGER,
-                    score_label TEXT,
-                    temp_air REAL,
-                    temp_water REAL,
-                    pressure_hpa INTEGER,
-                    pressure_trend TEXT,
-                    wind_kmh INTEGER,
-                    wind_dir TEXT,
-                    tide_state TEXT,
-                    next_high TEXT,
-                    next_low TEXT,
-                    solunar_major TEXT,
-                    solunar_minor TEXT,
-                    moon_phase TEXT,
-                    depth_m TEXT,
-                    bottom TEXT,
-                    top_baits TEXT,
-                    species_ids TEXT,
-                    field_report TEXT,
-                    offline_pack_mb REAL,
-                    downloaded INTEGER
-                )
-            """)
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS spots (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                department TEXT,
+                water_type TEXT,
+                lat REAL,
+                lng REAL,
+                map_x REAL,
+                map_y REAL,
+                fish_score INTEGER,
+                score_label TEXT,
+                temp_air REAL,
+                temp_water REAL,
+                pressure_hpa INTEGER,
+                pressure_trend TEXT,
+                wind_kmh INTEGER,
+                wind_dir TEXT,
+                tide_state TEXT,
+                next_high TEXT,
+                next_low TEXT,
+                solunar_major TEXT,
+                solunar_minor TEXT,
+                moon_phase TEXT,
+                depth_m TEXT,
+                bottom TEXT,
+                top_baits TEXT,
+                species_ids TEXT,
+                field_report TEXT,
+                offline_pack_mb REAL,
+                downloaded INTEGER
+            )
+        """)
 
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS catches (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    fisher TEXT,
-                    spot_id TEXT,
-                    spot_name TEXT,
-                    species TEXT,
-                    weight_kg REAL,
-                    length_cm INTEGER,
-                    bait TEXT,
-                    comment TEXT,
-                    released INTEGER,
-                    likes INTEGER,
-                    time_ago TEXT
-                )
-            """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS catches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fisher TEXT,
+                spot_id TEXT,
+                spot_name TEXT,
+                species TEXT,
+                weight_kg REAL,
+                length_cm INTEGER,
+                bait TEXT,
+                comment TEXT,
+                released INTEGER,
+                likes INTEGER,
+                time_ago TEXT
+            )
+        """)
 
-            cur.execute("SELECT COUNT(*) as c FROM spots")
-            if cur.fetchone()["c"] == 0:
-                for s in URUGUAY_SPOTS:
-                    cur.execute("""
-                        INSERT INTO spots VALUES (
-                            :id, :name, :department, :water_type, :lat, :lng, :map_x, :map_y,
-                            :fish_score, :score_label, :temp_air, :temp_water, :pressure_hpa,
-                            :pressure_trend, :wind_kmh, :wind_dir, :tide_state, :next_high,
-                            :next_low, :solunar_major, :solunar_minor, :moon_phase, :depth_m,
-                            :bottom, :top_baits, :species_ids, :field_report, :offline_pack_mb, :downloaded
-                        )
-                    """, s)
+        cur.execute("SELECT COUNT(*) as c FROM spots")
+        if cur.fetchone()["c"] == 0:
+            for s in URUGUAY_SPOTS:
+                cur.execute("""
+                    INSERT INTO spots VALUES (
+                        :id, :name, :department, :water_type, :lat, :lng, :map_x, :map_y,
+                        :fish_score, :score_label, :temp_air, :temp_water, :pressure_hpa,
+                        :pressure_trend, :wind_kmh, :wind_dir, :tide_state, :next_high,
+                        :next_low, :solunar_major, :solunar_minor, :moon_phase, :depth_m,
+                        :bottom, :top_baits, :species_ids, :field_report, :offline_pack_mb, :downloaded
+                    )
+                """, s)
 
-            cur.execute("SELECT COUNT(*) as c FROM catches")
-            if cur.fetchone()["c"] == 0:
-                for c in INITIAL_COMMUNITY_CATCHES:
-                    cur.execute("""
-                        INSERT INTO catches (
-                            fisher, spot_id, spot_name, species, weight_kg, length_cm,
-                            bait, comment, released, likes, time_ago
-                        ) VALUES (
-                            :fisher, :spot_id, :spot_name, :species, :weight_kg, :length_cm,
-                            :bait, :comment, :released, :likes, :time_ago
-                        )
-                    """, c)
-            conn.commit()
+        cur.execute("SELECT COUNT(*) as c FROM catches")
+        if cur.fetchone()["c"] == 0:
+            for c in INITIAL_COMMUNITY_CATCHES:
+                cur.execute("""
+                    INSERT INTO catches (
+                        fisher, spot_id, spot_name, species, weight_kg, length_cm,
+                        bait, comment, released, likes, time_ago
+                    ) VALUES (
+                        :fisher, :spot_id, :spot_name, :species, :weight_kg, :length_cm,
+                        :bait, :comment, :released, :likes, :time_ago
+                    )
+                """, c)
+        conn.commit()
+        if self.mem_conn is None:
+            conn.close()
 
     def get_spots(self):
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM spots").fetchall()
-            return [dict(r) for r in rows]
+        conn = self._connect()
+        rows = conn.execute("SELECT * FROM spots").fetchall()
+        res = [dict(r) for r in rows]
+        if self.mem_conn is None:
+            conn.close()
+        return res
 
     def mark_spot_downloaded(self, spot_id):
-        with self._connect() as conn:
-            conn.execute("UPDATE spots SET downloaded = 1 WHERE id = ?", (spot_id,))
-            conn.commit()
+        conn = self._connect()
+        conn.execute("UPDATE spots SET downloaded = 1 WHERE id = ?", (spot_id,))
+        conn.commit()
+        if self.mem_conn is None:
+            conn.close()
 
     def get_catches(self):
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM catches ORDER BY id DESC").fetchall()
-            return [dict(r) for r in rows]
+        conn = self._connect()
+        rows = conn.execute("SELECT * FROM catches ORDER BY id DESC").fetchall()
+        res = [dict(r) for r in rows]
+        if self.mem_conn is None:
+            conn.close()
+        return res
 
     def add_catch(self, fisher, spot_id, spot_name, species, weight_kg, length_cm, bait, comment, released=1):
-        with self._connect() as conn:
-            conn.execute("""
-                INSERT INTO catches (
-                    fisher, spot_id, spot_name, species, weight_kg, length_cm,
-                    bait, comment, released, likes, time_ago
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'Recién')
-            """, (fisher, spot_id, spot_name, species, weight_kg, length_cm, bait, comment, released))
-            conn.commit()
-
-    def like_catch(self, catch_id):
-        with self._connect() as conn:
-            conn.execute("UPDATE catches SET likes = likes + 1 WHERE id = ?", (catch_id,))
-            conn.commit()
+        conn = self._connect()
+        conn.execute("""
+            INSERT INTO catches (
+                fisher, spot_id, spot_name, species, weight_kg, length_cm,
+                bait, comment, released, likes, time_ago
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'Recién')
+        """, (fisher, spot_id, spot_name, species, weight_kg, length_cm, bait, comment, released))
+        conn.commit()
+        if self.mem_conn is None:
+            conn.close()
