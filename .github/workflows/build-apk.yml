@@ -14,23 +14,44 @@ jobs:
       - name: Descargar código Python de PiqueUY
         uses: actions/checkout@v4
 
-      - name: Instalar dependencias de compilación Android (SDL2 / NDK / Java 17)
+      - name: Configurar Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Configurar Java 17 para Android SDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cachear SDK y NDK de Buildozer (acelera compilaciones futuras)
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildozer
+            ~/.buildozer
+          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+
+      - name: Instalar dependencias de Ubuntu para Python-for-Android y Buildozer
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential git zip unzip openjdk-17-jdk python3-pip \
-            autoconf libtool pkg-config zlib1g-dev libncurses5-dev \
-            libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+            build-essential git zip unzip autoconf libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
+            libffi-dev libssl-dev automake libltdl-dev patch
 
-      - name: Compilar archivo .APK instalable con Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer_apk
-        with:
-          command: buildozer android debug
-          buildozer_version: stable
+      - name: Instalar Buildozer y Cython
+        run: |
+          pip3 install --upgrade pip "setuptools<70.0.0" wheel
+          pip3 install "cython==0.29.36" "buildozer==1.5.0"
+
+      - name: Compilar archivo .APK con Buildozer
+        run: |
+          yes | buildozer android debug
 
       - name: Subir el archivo .APK listo para descargar al celular
         uses: actions/upload-artifact@v4
         with:
           name: PiqueUY-Android-APK
-          path: ${{ steps.buildozer_apk.outputs.filename }}
+          path: bin/*.apk
