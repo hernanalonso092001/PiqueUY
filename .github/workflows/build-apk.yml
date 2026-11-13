@@ -25,30 +25,32 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cachear SDK y NDK de Buildozer (acelera compilaciones futuras)
+      - name: Cachear SDK y NDK de Buildozer
         uses: actions/cache@v4
         with:
           path: |
             .buildozer
             ~/.buildozer
-          key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-v2-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
-      - name: Instalar dependencias de Ubuntu para Python-for-Android y Buildozer
+      - name: Instalar dependencias de Ubuntu para Python-for-Android
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential git zip unzip autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-            libffi-dev libssl-dev automake libltdl-dev patch
+            libffi-dev libssl-dev automake libltdl-dev patch lbzip2 \
+            libstdc++6 libpulse-dev
 
-      - name: Instalar Buildozer y Cython
+      - name: Instalar Buildozer, Cython y Packaging
         run: |
-          pip3 install --upgrade pip "setuptools<70.0.0" wheel
-          pip3 install "cython==0.29.36" "buildozer==1.5.0"
+          python -m pip install --upgrade pip "setuptools<69.0.0" wheel packaging appdirs
+          python -m pip install "cython==0.29.36"
+          python -m pip install git+https://github.com/kivy/buildozer.git@master
 
       - name: Compilar archivo .APK con Buildozer
         run: |
-          yes | buildozer android debug
+          yes | buildozer -v android debug
 
       - name: Subir el archivo .APK listo para descargar al celular
         uses: actions/upload-artifact@v4
