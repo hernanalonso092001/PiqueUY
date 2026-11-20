@@ -23,7 +23,7 @@ URUGUAY_SPOTS = [
         "pressure_trend": "Estable (Óptimo)",
         "wind_kmh": 14,
         "wind_dir": "SE (Viento de Agua)",
-        "tide_state": "Creciendo · Media marea",
+        "tide_state": "Creciendo - Media marea",
         "next_high": "14:40 hs (1.65m)",
         "next_low": "21:15 hs (0.42m)",
         "solunar_major": "06:15-08:15 / 18:45-20:45",
@@ -165,7 +165,7 @@ URUGUAY_SPOTS = [
         "id": "sal-salto-grande",
         "name": "Salto Grande y Meseta de Artigas",
         "department": "Salto / Paysandú",
-        "water_type": "Agua Dulce · Río Uruguay",
+        "water_type": "Agua Dulce - Río Uruguay",
         "lat": -31.2740,
         "lng": -57.9310,
         "map_x": 0.19,
@@ -196,7 +196,7 @@ URUGUAY_SPOTS = [
         "id": "rne-andresito",
         "name": "Rincón del Bonete, San Gregorio y Andresito",
         "department": "Tacuarembó / Flores / Durazno",
-        "water_type": "Agua Dulce · Río Negro",
+        "water_type": "Agua Dulce - Río Negro",
         "lat": -32.8330,
         "lng": -56.4210,
         "map_x": 0.45,
@@ -494,7 +494,7 @@ INITIAL_COMMUNITY_CATCHES = [
     {
         "fisher": "Diego & Facu (Hopliomaníacos)",
         "spot_id": "rne-andresito",
-        "spot_name": "Bahía de los Palos — Andresito",
+        "spot_name": "Bahía de los Palos - Andresito",
         "species": "Tararira Tornasol (Azul)",
         "weight_kg": 5.6,
         "length_cm": 72,
@@ -509,6 +509,10 @@ INITIAL_COMMUNITY_CATCHES = [
 
 class OfflineDatabase:
     def __init__(self, db_dir=None):
+        """
+        En Android (API 24-34), la carpeta donde se descomprime el código (.py) es de SOLO LECTURA.
+        Por eso usamos user_data_dir de Android o un fallback en memoria si no tiene permiso de escritura.
+        """
         self.mem_conn = None
         if db_dir is None:
             try:
@@ -525,9 +529,11 @@ class OfflineDatabase:
         try:
             os.makedirs(db_dir, exist_ok=True)
             self.db_path = os.path.join(db_dir, DB_FILENAME)
+            # Probar apertura de escritura
             test_conn = sqlite3.connect(self.db_path)
             test_conn.close()
         except Exception:
+            # Fallback infalible en RAM para que jamás crashee en ningún celular Android
             self.db_path = ":memory:"
             self.mem_conn = sqlite3.connect(":memory:")
             self.mem_conn.row_factory = sqlite3.Row
