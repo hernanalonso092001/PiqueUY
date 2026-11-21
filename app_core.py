@@ -762,11 +762,11 @@ class RootLayout(BoxLayout):
     ai_response_text = StringProperty("")
 
     def __init__(self, db_dir=None, **kwargs):
-        super().__init__(**kwargs)
         self.db = OfflineDatabase(db_dir=db_dir)
         self.ai = BaqueanoAIEngine()
         self.spots = self.db.get_spots()
         self.selected_spot = self.spots[0]
+        super().__init__(**kwargs)
 
     def on_kv_post(self, base_widget):
         self.select_spot(self.selected_spot)
